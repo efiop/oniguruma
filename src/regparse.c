@@ -5353,6 +5353,7 @@ parse_branch(Node** top, OnigToken* tok, int term,
       }
       else {
         *headp = node_new_list(node, NULL);
+	CHECK_NULL_RETURN_MEMERR(*headp);
         headp = &(NCDR(*headp));
       }
     }
@@ -5394,6 +5395,7 @@ parse_subexp(Node** top, OnigToken* tok, int term,
         return r;
       }
       *headp = onig_node_new_alt(node, NULL);
+      CHECK_NULL_RETURN_MEMERR(*headp);
       headp = &(NCDR(*headp));
     }
 
