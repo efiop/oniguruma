@@ -436,18 +436,23 @@ static int
 add_compile_string(UChar* s, int mb_len, int str_len,
                    regex_t* reg, int ignore_case)
 {
+  int r;
   int op = select_str_opcode(mb_len, str_len, ignore_case);
   add_opcode(reg, op);
 
-  if (op == OP_EXACTMBN)
-    add_length(reg, mb_len);
+  if (op == OP_EXACTMBN) {
+    r = add_length(reg, mb_len);
+    if (r) return r;
+  }
 
   if (IS_NEED_STR_LEN_OP_EXACT(op)) {
     if (op == OP_EXACTN_IC)
-      add_length(reg, mb_len * str_len);
+      r = add_length(reg, mb_len * str_len);
     else
-      add_length(reg, str_len);
+      r = add_length(reg, str_len);
   }
+
+  if (r) return r; 
 
   add_bytes(reg, s, mb_len * str_len);
   return 0;
@@ -554,14 +559,17 @@ static int
 add_multi_byte_cclass(BBuf* mbuf, regex_t* reg)
 {
 #ifdef PLATFORM_UNALIGNED_WORD_ACCESS
-  add_length(reg, mbuf->used);
+  int r;
+  r = add_length(reg, mbuf->used);
+  if (r) return r;
   return add_bytes(reg, mbuf->p, mbuf->used);
 #else
   int r, pad_size;
   UChar* p = BBUF_GET_ADD_ADDRESS(reg) + SIZE_LENGTH;
 
   GET_ALIGNMENT_PAD_SIZE(p, pad_size);
-  add_length(reg, mbuf->used + (WORD_ALIGNMENT_SIZE - 1));
+  r = add_length(reg, mbuf->used + (WORD_ALIGNMENT_SIZE - 1));
+  if (r) return r;
   if (pad_size != 0) add_bytes(reg, PadBuf, pad_size);
 
   r = add_bytes(reg, mbuf->p, mbuf->used);
