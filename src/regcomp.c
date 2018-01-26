@@ -454,8 +454,7 @@ add_compile_string(UChar* s, int mb_len, int str_len,
 
   if (r) return r; 
 
-  add_bytes(reg, s, mb_len * str_len);
-  return 0;
+  return add_bytes(reg, s, mb_len * str_len);
 }
 
 
@@ -570,13 +569,18 @@ add_multi_byte_cclass(BBuf* mbuf, regex_t* reg)
   GET_ALIGNMENT_PAD_SIZE(p, pad_size);
   r = add_length(reg, mbuf->used + (WORD_ALIGNMENT_SIZE - 1));
   if (r) return r;
-  if (pad_size != 0) add_bytes(reg, PadBuf, pad_size);
+  if (pad_size != 0) {
+    r = add_bytes(reg, PadBuf, pad_size);
+    if (r) return r;
+  }
 
   r = add_bytes(reg, mbuf->p, mbuf->used);
+  if (r) return r;
 
   /* padding for return value from compile_length_cclass_node() to be fix. */
   pad_size = (WORD_ALIGNMENT_SIZE - 1) - pad_size;
-  if (pad_size != 0) add_bytes(reg, PadBuf, pad_size);
+  if (pad_size != 0)
+    r = add_bytes(reg, PadBuf, pad_size);
   return r;
 #endif
 }
@@ -1095,7 +1099,8 @@ compile_quantifier_node(QtfrNode* qn, regex_t* reg)
         r = add_opcode_rel_addr(reg, OP_PUSH_OR_JUMP_EXACT1,
                                 mod_tlen + SIZE_OP_JUMP);
         if (r) return r;
-        add_bytes(reg, NSTR(qn->head_exact)->s, 1);
+        r = add_bytes(reg, NSTR(qn->head_exact)->s, 1);
+        if (r) return r;
         r = compile_tree_empty_check(qn->target, reg, empty_info);
         if (r) return r;
         r = add_opcode_rel_addr(reg, OP_JUMP,
@@ -1105,7 +1110,8 @@ compile_quantifier_node(QtfrNode* qn, regex_t* reg)
         r = add_opcode_rel_addr(reg, OP_PUSH_IF_PEEK_NEXT,
                                 mod_tlen + SIZE_OP_JUMP);
         if (r) return r;
-        add_bytes(reg, NSTR(qn->next_head_exact)->s, 1);
+        r = add_bytes(reg, NSTR(qn->next_head_exact)->s, 1);
+        if (r) return r;
         r = compile_tree_empty_check(qn->target, reg, empty_info);
         if (r) return r;
         r = add_opcode_rel_addr(reg, OP_JUMP,
