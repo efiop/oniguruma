@@ -438,7 +438,9 @@ add_compile_string(UChar* s, int mb_len, int str_len,
 {
   int r;
   int op = select_str_opcode(mb_len, str_len, ignore_case);
-  add_opcode(reg, op);
+
+  r = add_opcode(reg, op);
+  if (r) return r;
 
   if (op == OP_EXACTMBN) {
     r = add_length(reg, mb_len);
@@ -621,33 +623,38 @@ compile_cclass_node(CClassNode* cc, regex_t* reg)
   int r;
 
   if (IS_NCCLASS_SHARE(cc)) {
-    add_opcode(reg, OP_CCLASS_NODE);
+    r = add_opcode(reg, OP_CCLASS_NODE);
+    if (r) return r;
     r = add_pointer(reg, cc);
     return r;
   }
 
   if (IS_NULL(cc->mbuf)) {
     if (IS_NCCLASS_NOT(cc))
-      add_opcode(reg, OP_CCLASS_NOT);
+      r = add_opcode(reg, OP_CCLASS_NOT);
     else
-      add_opcode(reg, OP_CCLASS);
+      r = add_opcode(reg, OP_CCLASS);
 
+    if (r) return r;
     r = add_bitset(reg, cc->bs);
   }
   else {
     if (ONIGENC_MBC_MINLEN(reg->enc) > 1 || bitset_is_empty(cc->bs)) {
       if (IS_NCCLASS_NOT(cc))
-        add_opcode(reg, OP_CCLASS_MB_NOT);
+        r = add_opcode(reg, OP_CCLASS_MB_NOT);
       else
-        add_opcode(reg, OP_CCLASS_MB);
+        r = add_opcode(reg, OP_CCLASS_MB);
 
+      if (r) return r;
       r = add_multi_byte_cclass(cc->mbuf, reg);
     }
     else {
       if (IS_NCCLASS_NOT(cc))
-        add_opcode(reg, OP_CCLASS_MIX_NOT);
+        r = add_opcode(reg, OP_CCLASS_MIX_NOT);
       else
-        add_opcode(reg, OP_CCLASS_MIX);
+        r = add_opcode(reg, OP_CCLASS_MIX);
+
+      if (r) return r;
 
       r = add_bitset(reg, cc->bs);
       if (r) return r;
